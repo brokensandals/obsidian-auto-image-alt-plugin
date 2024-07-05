@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "auto-image-alt",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Obsidian plugin that adds alt-text to images using generative AI.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
