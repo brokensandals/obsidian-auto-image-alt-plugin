@@ -169,6 +169,6 @@ class AutoImageAltSettingTab extends PluginSettingTab {
           this.plugin.settings.anthropicModel = value;
           await this.plugin.saveSettings();
         }));
-      }
-    }
+  }
+}
     
