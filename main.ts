@@ -1,139 +1,11 @@
-import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, RequestUrlParam, RequestUrlResponse, Setting, normalizePath, requestUrl } from 'obsidian';
-import { Anthropic, ClientOptions } from '@anthropic-ai/sdk';
-import { TextBlock } from '@anthropic-ai/sdk/resources';
-
-interface AutoImageAltSettings {
-  anthropicApiKey: string;
-  anthropicModel: string;
-  syncSensitiveSettings: boolean;
-}
-
-const DEFAULT_SETTINGS: AutoImageAltSettings = {
-  anthropicApiKey: '',
-  anthropicModel: 'claude-3-5-sonnet-20240620',
-  syncSensitiveSettings: false,
-}
-
-function scrubbedSettings(settings: AutoImageAltSettings): AutoImageAltSettings {
-  return {
-    ...DEFAULT_SETTINGS,
-    anthropicModel: settings.anthropicModel,
-  };
-}
-
-class AltGen {
-  anthropic: Anthropic;
-  settings: AutoImageAltSettings;
-  
-  constructor(settings: AutoImageAltSettings) {
-    this.settings = settings;
-    const opts: ClientOptions = {
-      // To avoid CORS errors, we need to send the Anthropic library's requests through to Obsidian's requestUrl method
-      fetch: async (url: RequestInfo, init?: RequestInit): Promise<Response> => {
-        const fetchReq = (typeof url === 'string' || url instanceof String) ? null : (url as Request);
-        const urlString = fetchReq === null ? (url as string) : fetchReq.url;
-        const obsidianReq: RequestUrlParam = {
-          url: urlString,
-        };
-        
-        if (fetchReq?.body) {
-          obsidianReq.body = fetchReq.body;
-        } else if (init?.body) {
-          obsidianReq.body = init.body;
-        }
-        
-        if (fetchReq?.headers) {
-          obsidianReq.headers = {...fetchReq.headers};
-        } else if (init?.headers) {
-          obsidianReq.headers = {...init.headers};
-        }
-        if (obsidianReq.headers) {
-          // SimpleURLLoaderWrapper will throw ERR_INVALID_ARGUMENT if you try to pass this
-          delete obsidianReq.headers['content-length'];
-        }
-        
-        if (fetchReq?.method) {
-          obsidianReq.method = fetchReq.method;
-        } else if (init?.method) {
-          obsidianReq.method = init.method;
-        }
-        
-        const obsidianResp: RequestUrlResponse = await requestUrl(obsidianReq);
-        const fetchResp = new Response(
-          obsidianResp.arrayBuffer,
-          {
-            status: obsidianResp.status,
-            headers: obsidianResp.headers,
-          });
-        return fetchResp;
-      },
-    };
-    if (settings.anthropicApiKey) {
-      opts.apiKey = settings.anthropicApiKey;
-    }
-    this.anthropic = new Anthropic(opts);
-  }
-  
-  async generate(imageFilename: string, imageData: ArrayBuffer): Promise<string> {
-    let mediaType = 'image';
-    const lowerFilename = imageFilename.toLowerCase();
-    if (lowerFilename.endsWith('.gif')) {
-      mediaType = 'image/gif';
-    } else if (lowerFilename.endsWith('.jpg' || lowerFilename.endsWith('jpeg'))) {
-      mediaType = 'image/jpeg';
-    } else if (lowerFilename.endsWith('.png')) {
-      mediaType = 'image/png';
-    } else if (lowerFilename.endsWith('webp')) {
-      mediaType = 'image/webp';
-    }
-
-    const message = await this.anthropic.messages.create({
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: mediaType, data: Buffer.from(imageData).toString('base64') },
-            },
-            {
-              type: 'text',
-              text: 'Provide a description of this image suitable for use as HTML alt-text. Do not use line breaks or square bracket characters in your description.',
-            }
-          ],
-        },
-      ],
-      model: this.settings.anthropicModel,
-    });
-    
-    return message.content.filter(c => c.type == "text").map(c => (c as TextBlock).text).join("\n\n");
-  }
-}
-
-interface ImageInfo {
-  target: string,
-  altBegin: number,
-  altEnd: number,
-}
-
-function locateImages(text: string): ImageInfo[] {
-  // TODO this is very hacky and will not handle cases like nested brackets
-  const regex = /!\[(.*?)\]\((.*?)(\s+.*?)?\)/dg;
-  const result: ImageInfo[] = [];
-  for (let match of text.matchAll(regex)) {
-    result.push({
-      target: match[2],
-      altBegin: match.indices[1][0],
-      altEnd: match.indices[1][1],
-    });
-  }
-  return result;
-}
+import { App, Editor, MarkdownView, Plugin, PluginSettingTab, Setting, normalizePath } from 'obsidian';
+import { dataFromSettings, settingsFromData, AutoImageAltSettings } from 'src/settings';
+import { AltGen } from 'src/generation';
+import { buildImagePath, locateImages } from 'src/imgtags';
 
 export default class AutoImageAlt extends Plugin {
   settings: AutoImageAltSettings;
-  
+
   async onload() {
     await this.loadSettings();
     
@@ -150,7 +22,7 @@ export default class AutoImageAlt extends Plugin {
           // TODO this is all super hacky
           // TODO need to handle paths relative to the open file
           // TODO need to handle URLs
-          const imagePath = normalizePath(view.file?.parent?.path + '/' + decodeURI(image.target));
+          const imagePath = buildImagePath(view.file?.parent?.path || '', image.target);
           const imageFile = this.app.vault.getFileByPath(imagePath);
           if (imageFile) {
             const imageData = await this.app.vault.readBinary(imageFile);
@@ -167,12 +39,11 @@ export default class AutoImageAlt extends Plugin {
   }
   
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.settings = settingsFromData(await this.loadData());
   }
   
   async saveSettings() {
-    const saveable = this.settings.syncSensitiveSettings ? this.settings : scrubbedSettings(this.settings);
-    await this.saveData(saveable);
+    await this.saveData(dataFromSettings(this.settings));
   }
 }
 
