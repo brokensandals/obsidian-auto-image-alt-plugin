@@ -1,15 +1,15 @@
 import { normalizePath } from "obsidian";
 
-export interface ImageInfo {
+export interface ImageTag {
   target: string,
   altBegin: number,
   altEnd: number,
 }
 
-export function locateImages(text: string): ImageInfo[] {
+export function locateImages(text: string): ImageTag[] {
   // TODO this is very hacky and will not handle cases like nested brackets
   const regex = /!\[(.*?)\]\((.*?)(\s+.*?)?\)/dg;
-  const result: ImageInfo[] = [];
+  const result: ImageTag[] = [];
   for (let match of text.matchAll(regex)) {
     result.push({
       target: match[2],
