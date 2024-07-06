@@ -29,6 +29,7 @@ class AltGen {
   constructor(settings: AutoImageAltSettings) {
     this.settings = settings;
     const opts: ClientOptions = {
+      // To avoid CORS errors, we need to send the Anthropic library's requests through to Obsidian's requestUrl method
       fetch: async (url: RequestInfo, init?: RequestInit): Promise<Response> => {
         const fetchReq = (typeof url === 'string' || url instanceof String) ? null : (url as Request);
         const urlString = fetchReq === null ? (url as string) : fetchReq.url;
@@ -138,17 +139,17 @@ class AltGen {
       containerEl.empty();
       
       new Setting(containerEl)
-      .setName('Anthropic API key')
-      .setDesc(fragmentForHTML('Your API key. This is used to make requests to Claude containing your images and asking it to describe them. See <a href="https://docs.anthropic.com/en/api/getting-started">the Anthropic API\'s Getting Started page</a>.<br/><b>Note:</b> For security reasons, this is currently not saved, and must be re-entered after restarting Obsidian or reloading the plugin.'))
-      .addText(text => text
-        .setPlaceholder('Enter your API key')
-        .setValue(this.plugin.settings.anthropicApiKey)
-        .onChange(async (value) => {
-          this.plugin.settings.anthropicApiKey = value;
-          await this.plugin.saveSettings();
-        }));
+        .setName('Anthropic API key')
+        .setDesc(fragmentForHTML('Your API key. This is used to make requests to Claude containing your images and asking it to describe them. See <a href="https://docs.anthropic.com/en/api/getting-started">the Anthropic API\'s Getting Started page</a>.<br/><b>Note:</b> For security reasons, this is currently not saved, and must be re-entered after restarting Obsidian or reloading the plugin.'))
+        .addText(text => text
+          .setPlaceholder('Enter your API key')
+          .setValue(this.plugin.settings.anthropicApiKey)
+          .onChange(async (value) => {
+            this.plugin.settings.anthropicApiKey = value;
+            await this.plugin.saveSettings();
+          }));
         
-        new Setting(containerEl)
+      new Setting(containerEl)
         .setName('Anthropic model')
         .setDesc(fragmentForHTML('The model identifier you want to use when making requests to Claude. See <a href="https://docs.anthropic.com/en/docs/about-claude/models">the Anthropic User Guide\'s Models page</a>.'))
         .addText(text => text
