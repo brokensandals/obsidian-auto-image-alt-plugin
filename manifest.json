@@ -1,7 +1,7 @@
 {
 	"id": "auto-image-alt",
 	"name": "Automatic Image Alt-Text Generator",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"minAppVersion": "0.15.0",
 	"description": "Adds alt-text to images using generative AI.",
 	"author": "Jacob Williams",
