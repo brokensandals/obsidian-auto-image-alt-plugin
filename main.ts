@@ -65,110 +65,110 @@ class AltGen {
             status: obsidianResp.status,
             headers: obsidianResp.headers,
           });
-          return fetchResp;
-        },
-      };
-      if (settings.anthropicApiKey) {
-        opts.apiKey = settings.anthropicApiKey;
-      }
-      this.anthropic = new Anthropic(opts);
+        return fetchResp;
+      },
+    };
+    if (settings.anthropicApiKey) {
+      opts.apiKey = settings.anthropicApiKey;
     }
-    
-    async generate(): Promise<string> {
-      const message = await this.anthropic.messages.create({
-        max_tokens: 1024,
-        messages: [{ role: 'user', content: 'Tell me a one-line joke.' }],
-        model: this.settings.anthropicModel,
-      });
-      
-      return message.content.filter(c => c.type == "text").map(c => (c as TextBlock).text).join("\n\n");
-    }
+    this.anthropic = new Anthropic(opts);
   }
   
-  export default class AutoImageAlt extends Plugin {
-    settings: AutoImageAltSettings;
+  async generate(): Promise<string> {
+    const message = await this.anthropic.messages.create({
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: 'Tell me a one-line joke.' }],
+      model: this.settings.anthropicModel,
+    });
     
-    async onload() {
-      await this.loadSettings();
-      
-      this.addSettingTab(new AutoImageAltSettingTab(this.app, this));
-      
-      this.addCommand({
-        id: "generate-selected",
-        name: "Generate alt-text for selected image",
-        editorCallback: async (editor: Editor, view: MarkdownView) => {
-          const altgen = new AltGen(this.settings);
-          const result = await altgen.generate();
-          new Notice(result);
-        },
-      });
-    }
+    return message.content.filter(c => c.type == "text").map(c => (c as TextBlock).text).join("\n\n");
+  }
+}
+  
+export default class AutoImageAlt extends Plugin {
+  settings: AutoImageAltSettings;
+  
+  async onload() {
+    await this.loadSettings();
     
-    onunload() {
-      
-    }
+    this.addSettingTab(new AutoImageAltSettingTab(this.app, this));
     
-    async loadSettings() {
-      this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-    }
-    
-    async saveSettings() {
-      const saveable = this.settings.syncSensitiveSettings ? this.settings : scrubbedSettings(this.settings);
-      await this.saveData(saveable);
-    }
+    this.addCommand({
+      id: "generate-selected",
+      name: "Generate alt-text for selected image",
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        const altgen = new AltGen(this.settings);
+        const result = await altgen.generate();
+        new Notice(result);
+      },
+    });
   }
   
-  function fragmentForHTML(html: string): DocumentFragment {
-    const fragment = document.createDocumentFragment();
-    const div = fragment.createDiv();
-    div.innerHTML = html;
-    return fragment;
+  onunload() {
+    
   }
   
-  class AutoImageAltSettingTab extends PluginSettingTab {
-    plugin: AutoImageAlt;
-    
-    constructor(app: App, plugin: AutoImageAlt) {
-      super(app, plugin);
-      this.plugin = plugin;
-    }
-    
-    display(): void {
-      const {containerEl} = this;
-      
-      containerEl.empty();
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+  
+  async saveSettings() {
+    const saveable = this.settings.syncSensitiveSettings ? this.settings : scrubbedSettings(this.settings);
+    await this.saveData(saveable);
+  }
+}
 
-      new Setting(containerEl)
-        .setName('Sync sensitive settings')
-        .setDesc(fragmentForHTML('By default, for security reasons, the API key below will <b>NOT</b> be saved, and you will need to re-enter it upon reloading the plugin or restarting Obsidian. If you\'re <i>sure</i> you want to save it, you can enable this toggle.<br/><b>Danger</b>: enabling this will cause your API key to be stored unencrypted in your data.json file.'))
-        .addToggle(toggle => toggle
-          .setValue(this.plugin.settings.syncSensitiveSettings)
-          .onChange(async (value) => {
-            this.plugin.settings.syncSensitiveSettings = value;
-            await this.plugin.saveSettings();
-          }));
+function fragmentForHTML(html: string): DocumentFragment {
+  const fragment = document.createDocumentFragment();
+  const div = fragment.createDiv();
+  div.innerHTML = html;
+  return fragment;
+}
+
+class AutoImageAltSettingTab extends PluginSettingTab {
+  plugin: AutoImageAlt;
+  
+  constructor(app: App, plugin: AutoImageAlt) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+  
+  display(): void {
+    const {containerEl} = this;
+    
+    containerEl.empty();
+
+    new Setting(containerEl)
+      .setName('Sync sensitive settings')
+      .setDesc(fragmentForHTML('By default, for security reasons, the API key below will <b>NOT</b> be saved, and you will need to re-enter it upon reloading the plugin or restarting Obsidian. If you\'re <i>sure</i> you want to save it, you can enable this toggle.<br/><b>Danger</b>: enabling this will cause your API key to be stored unencrypted in your data.json file.'))
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.syncSensitiveSettings)
+        .onChange(async (value) => {
+          this.plugin.settings.syncSensitiveSettings = value;
+          await this.plugin.saveSettings();
+        }));
+    
+    new Setting(containerEl)
+      .setName('Anthropic API key')
+      .setDesc(fragmentForHTML('Your API key. This is used to make requests to Claude containing your images and asking it to describe them. See <a href="https://docs.anthropic.com/en/api/getting-started">the Anthropic API\'s Getting Started page</a>.<br/><b>Note:</b> For security reasons, this is currently not saved, and must be re-entered after restarting Obsidian or reloading the plugin.'))
+      .addText(text => text
+        .setPlaceholder('Enter your API key')
+        .setValue(this.plugin.settings.anthropicApiKey)
+        .onChange(async (value) => {
+          this.plugin.settings.anthropicApiKey = value;
+          await this.plugin.saveSettings();
+        }));
       
-      new Setting(containerEl)
-        .setName('Anthropic API key')
-        .setDesc(fragmentForHTML('Your API key. This is used to make requests to Claude containing your images and asking it to describe them. See <a href="https://docs.anthropic.com/en/api/getting-started">the Anthropic API\'s Getting Started page</a>.<br/><b>Note:</b> For security reasons, this is currently not saved, and must be re-entered after restarting Obsidian or reloading the plugin.'))
-        .addText(text => text
-          .setPlaceholder('Enter your API key')
-          .setValue(this.plugin.settings.anthropicApiKey)
-          .onChange(async (value) => {
-            this.plugin.settings.anthropicApiKey = value;
-            await this.plugin.saveSettings();
-          }));
-        
-      new Setting(containerEl)
-        .setName('Anthropic model')
-        .setDesc(fragmentForHTML('The model identifier you want to use when making requests to Claude. See <a href="https://docs.anthropic.com/en/docs/about-claude/models">the Anthropic User Guide\'s Models page</a>.'))
-        .addText(text => text
-          .setPlaceholder('Enter a model identifier')
-          .setValue(this.plugin.settings.anthropicModel)
-          .onChange(async (value) => {
-            this.plugin.settings.anthropicModel = value;
-            await this.plugin.saveSettings();
-          }));
-        }
+    new Setting(containerEl)
+      .setName('Anthropic model')
+      .setDesc(fragmentForHTML('The model identifier you want to use when making requests to Claude. See <a href="https://docs.anthropic.com/en/docs/about-claude/models">the Anthropic User Guide\'s Models page</a>.'))
+      .addText(text => text
+        .setPlaceholder('Enter a model identifier')
+        .setValue(this.plugin.settings.anthropicModel)
+        .onChange(async (value) => {
+          this.plugin.settings.anthropicModel = value;
+          await this.plugin.saveSettings();
+        }));
       }
-      
+    }
+    
