@@ -76,7 +76,7 @@ export class AutoImageAlt extends Plugin {
       const imageFile = this.app.vault.getFileByPath(imagePath);
       if (imageFile) {
         const imageData = await this.app.vault.readBinary(imageFile);
-        const result = await altgen.generate(imageFile.name, imageData);
+        const result = await altgen.generate(imageFile.name, imageData, this.settings.prompt);
         editor.replaceRange(result, editor.offsetToPos(image.altBegin), editor.offsetToPos(image.altEnd));
       }
     }
@@ -132,6 +132,17 @@ class AutoImageAltSettingTab extends PluginSettingTab {
         .setValue(this.plugin.settings.anthropicModel)
         .onChange(async (value) => {
           this.plugin.settings.anthropicModel = value;
+          await this.plugin.saveSettings();
+        }));
+    
+    new Setting(containerEl)
+      .setName("Prompt")
+      .setDesc("The prompt for asking the model to generate an image description.")
+      .addTextArea(text => text
+        .setPlaceholder('Enter a prompt')
+        .setValue(this.plugin.settings.prompt)
+        .onChange(async (value) => {
+          this.plugin.settings.prompt = value;
           await this.plugin.saveSettings();
         }));
   }

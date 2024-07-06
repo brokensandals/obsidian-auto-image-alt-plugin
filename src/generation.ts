@@ -56,7 +56,7 @@ export class AltGen {
     this.anthropic = new Anthropic(opts);
   }
   
-  async generate(imageFilename: string, imageData: ArrayBuffer): Promise<string> {
+  async generate(imageFilename: string, imageData: ArrayBuffer, prompt: string): Promise<string> {
     // TODO determine media type in a cleaner and less rigid way
     let mediaType = 'image';
     const lowerFilename = imageFilename.toLowerCase();
@@ -82,7 +82,7 @@ export class AltGen {
             },
             {
               type: 'text',
-              text: 'Provide a description of this image suitable for use as HTML alt-text. Do not use line breaks or square bracket characters in your description.',
+              text: prompt,
             }
           ],
         },
