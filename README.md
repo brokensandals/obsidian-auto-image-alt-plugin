@@ -12,6 +12,10 @@ This plugin uses [Claude](https://claude.ai) to generate alt-text. Example:
 
 ![Shows the document after the command has been run, now containing an AI-generated alt-text.](docs/demo-step3.png)
 
+# Network Usage
+
+When you run the plugin's commands, images from your document will be sent to Anthropic's API so that it can generate descriptions of them. Don't use the plugin if you aren't comfortable with that!
+
 # Setup
 
 1. Install and enable the plugin
