@@ -84,7 +84,27 @@ class AltGen {
     return message.content.filter(c => c.type == "text").map(c => (c as TextBlock).text).join("\n\n");
   }
 }
-  
+
+interface ImageInfo {
+  target: string,
+  altBegin: number,
+  altEnd: number,
+}
+
+function locateImages(text: string): ImageInfo[] {
+  // TODO this is very hacky and will not handle cases like nested brackets
+  const regex = /!\[(.*?)\]\((.*?)(\s+.*?)?\)/dg;
+  const result: ImageInfo[] = [];
+  for (let match of text.matchAll(regex)) {
+    result.push({
+      target: match[2],
+      altBegin: match.indices[1][0],
+      altEnd: match.indices[1][1],
+    });
+  }
+  return result;
+}
+
 export default class AutoImageAlt extends Plugin {
   settings: AutoImageAltSettings;
   
@@ -94,12 +114,17 @@ export default class AutoImageAlt extends Plugin {
     this.addSettingTab(new AutoImageAltSettingTab(this.app, this));
     
     this.addCommand({
-      id: "generate-selected",
-      name: "Generate alt-text for selected image",
+      id: "generate-missing",
+      name: "Generate missing alt-texts",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        const altgen = new AltGen(this.settings);
-        const result = await altgen.generate();
-        new Notice(result);
+        // const altgen = new AltGen(this.settings);
+        // const result = await altgen.generate();
+        // new Notice(result);
+        const images = locateImages(editor.getValue()).filter(im => im.altEnd == im.altBegin);
+        images.reverse();
+        for (const image of images) {
+          editor.replaceRange("fancy new alt text", editor.offsetToPos(image.altBegin), editor.offsetToPos(image.altEnd));
+        }
       },
     });
   }
