@@ -19,14 +19,18 @@ export class AltGen {
         };
         
         if (fetchReq?.body) {
+          // @ts-ignore
           obsidianReq.body = fetchReq.body;
         } else if (init?.body) {
+          // @ts-ignore
           obsidianReq.body = init.body;
         }
         
         if (fetchReq?.headers) {
+          // @ts-ignore
           obsidianReq.headers = {...fetchReq.headers};
         } else if (init?.headers) {
+          // @ts-ignore
           obsidianReq.headers = {...init.headers};
         }
         if (obsidianReq.headers) {
@@ -78,6 +82,7 @@ export class AltGen {
           content: [
             {
               type: 'image',
+              // @ts-ignore
               source: { type: 'base64', media_type: mediaType, data: Buffer.from(imageData).toString('base64') },
             },
             {

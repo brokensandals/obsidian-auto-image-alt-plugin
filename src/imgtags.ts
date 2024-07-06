@@ -15,9 +15,13 @@ export function locateImages(text: string): ImageTag[] {
   for (let match of text.matchAll(regex)) {
     result.push({
       target: match[2],
+      // @ts-ignore
       tagBegin: match.indices[0][0],
+      // @ts-ignore
       tagEnd: match.indices[0][1],
+      // @ts-ignore
       altBegin: match.indices[1][0],
+      // @ts-ignore
       altEnd: match.indices[1][1],
     });
   }
