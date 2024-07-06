@@ -90,6 +90,7 @@ export class AltGen {
       model: this.settings.anthropicModel,
     });
     
-    return message.content.filter(c => c.type == "text").map(c => (c as TextBlock).text).join("\n\n");
+    const generated = message.content.filter(c => c.type == "text").map(c => (c as TextBlock).text).join("\n\n");
+    return this.settings.template.replace('$desc$', generated);
   }
 }

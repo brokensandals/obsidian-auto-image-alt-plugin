@@ -145,5 +145,16 @@ class AutoImageAltSettingTab extends PluginSettingTab {
           this.plugin.settings.prompt = value;
           await this.plugin.saveSettings();
         }));
+    
+    new Setting(containerEl)
+      .setName("Template")
+      .setDesc("Use this to add any boilerplate before/after the generated description. $desc$ will be replaced with the generatd alt-text.")
+      .addTextArea(text => text
+        .setPlaceholder('Enter a template')
+        .setValue(this.plugin.settings.template)
+        .onChange(async (value) => {
+          this.plugin.settings.template = value;
+          await this.plugin.saveSettings();
+        }));
   }
 }
