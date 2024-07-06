@@ -2,6 +2,8 @@ import { normalizePath } from "obsidian";
 
 export interface ImageTag {
   target: string,
+  tagBegin: number,
+  tagEnd: number,
   altBegin: number,
   altEnd: number,
 }
@@ -13,6 +15,8 @@ export function locateImages(text: string): ImageTag[] {
   for (let match of text.matchAll(regex)) {
     result.push({
       target: match[2],
+      tagBegin: match.indices[0][0],
+      tagEnd: match.indices[0][1],
       altBegin: match.indices[1][0],
       altEnd: match.indices[1][1],
     });

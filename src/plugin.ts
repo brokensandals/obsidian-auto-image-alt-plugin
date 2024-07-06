@@ -1,7 +1,7 @@
 import { App, Editor, MarkdownView, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { dataFromSettings, settingsFromData, AutoImageAltSettings } from './settings';
 import { AltGen } from './generation';
-import { buildImagePath, locateImages } from './imgtags';
+import { ImageTag, buildImagePath, locateImages } from './imgtags';
 
 export class AutoImageAlt extends Plugin {
   settings: AutoImageAltSettings;
@@ -15,21 +15,40 @@ export class AutoImageAlt extends Plugin {
       id: "generate-missing",
       name: "Generate missing alt-texts",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        const altgen = new AltGen(this.settings);
-        const images = locateImages(editor.getValue()).filter(im => im.altEnd == im.altBegin);
-        images.reverse();
-        for (const image of images) {
-          // TODO this is all super hacky
-          // TODO need to handle paths relative to the open file
-          // TODO need to handle URLs
-          const imagePath = buildImagePath(view.file?.parent?.path || '', image.target);
-          const imageFile = this.app.vault.getFileByPath(imagePath);
-          if (imageFile) {
-            const imageData = await this.app.vault.readBinary(imageFile);
-            const result = await altgen.generate(imageFile.name, imageData);
-            editor.replaceRange(result, editor.offsetToPos(image.altBegin), editor.offsetToPos(image.altEnd));
+        return await this.generateAndUpdate(editor, view, (im => im.altEnd == im.altBegin));
+      },
+    });
+
+    this.addCommand({
+      id: "Generate-all",
+      name: "Generate or regenerate all alt-texts",
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        return await this.generateAndUpdate(editor, view, (_ => true));
+      },
+    });
+
+    this.addCommand({
+      id: "generate-selected",
+      name: "Generate or regenerate alt-texts of images in selection",
+      editorCallback: async (editor: Editor, view: MarkdownView) => {
+        // This was written hastily and might contain some redundant or ill-conceived code (and, of course, bugs)
+        // My goal was to treat an image as 'selected' if the cursor or any part of any selection has any overlap with the image tag
+
+        const ranges: number[][] = [];
+        ranges.push([editor.posToOffset(editor.getCursor()), editor.posToOffset(editor.getCursor())]);
+        for (const sel of editor.listSelections()) {
+          let off1 = editor.posToOffset(sel.anchor);
+          let off2 = editor.posToOffset(sel.head);
+          if (off2 < off1) {
+            [off1, off2] = [off2, off1];
           }
+          ranges.push([off1, off2]);
         }
+
+        return await this.generateAndUpdate(
+          editor,
+          view,
+          (im => ranges.some(r => (r[0] >= im.tagBegin && r[0] <= im.tagEnd) || (r[1] >= im.tagBegin && r[0] <= im.tagEnd))));
       },
     });
   }
@@ -44,6 +63,23 @@ export class AutoImageAlt extends Plugin {
   
   async saveSettings() {
     await this.saveData(dataFromSettings(this.settings));
+  }
+
+  async generateAndUpdate(editor: Editor, view: MarkdownView, filter: (img: ImageTag) => boolean) {
+    const altgen = new AltGen(this.settings);
+    const images = locateImages(editor.getValue()).filter(filter);
+    images.reverse();
+    for (const image of images) {
+      // TODO this is all super hacky
+      // TODO need to handle URLs
+      const imagePath = buildImagePath(view.file?.parent?.path || '', image.target);
+      const imageFile = this.app.vault.getFileByPath(imagePath);
+      if (imageFile) {
+        const imageData = await this.app.vault.readBinary(imageFile);
+        const result = await altgen.generate(imageFile.name, imageData);
+        editor.replaceRange(result, editor.offsetToPos(image.altBegin), editor.offsetToPos(image.altEnd));
+      }
+    }
   }
 }
 
