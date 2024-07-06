@@ -6,11 +6,11 @@ AI models can often do a great job!
 
 This plugin uses [Claude](https://claude.ai) to generate alt-text. Example:
 
-![](docs/demo-step1.png)
+![Shows a document being edited in Obsidian, with a an image tag containing no alt-text.](docs/demo-step1.png)
 
-![](docs/demo-step2.png)
+![Shows the Obsidian command palette, with the "Generate missing alt-texts" command being selected.](docs/demo-step2.png)
 
-![](docs/demo-step3.png)
+![Shows the document after the command has been run, now containing an AI-generated alt-text.](docs/demo-step3.png)
 
 # Setup
 
