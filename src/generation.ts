@@ -2,6 +2,7 @@ import { Anthropic, ClientOptions } from "@anthropic-ai/sdk";
 import { AutoImageAltSettings } from "./settings";
 import { RequestUrlParam, RequestUrlResponse, requestUrl } from "obsidian";
 import { TextBlock } from "@anthropic-ai/sdk/resources";
+import { encode } from "base64-arraybuffer";
 
 export class AltGen {
   anthropic: Anthropic;
@@ -83,7 +84,7 @@ export class AltGen {
             {
               type: 'image',
               // @ts-ignore
-              source: { type: 'base64', media_type: mediaType, data: Buffer.from(imageData).toString('base64') },
+              source: { type: 'base64', media_type: mediaType, data: encode(imageData) },
             },
             {
               type: 'text',
