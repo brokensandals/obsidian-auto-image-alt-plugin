@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, RequestUrlParam, RequestUrlResponse, Setting, requestUrl } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, RequestUrlParam, RequestUrlResponse, Setting, normalizePath, requestUrl } from 'obsidian';
 import { Anthropic, ClientOptions } from '@anthropic-ai/sdk';
 import { TextBlock } from '@anthropic-ai/sdk/resources';
 
@@ -74,10 +74,36 @@ class AltGen {
     this.anthropic = new Anthropic(opts);
   }
   
-  async generate(): Promise<string> {
+  async generate(imageFilename: string, imageData: ArrayBuffer): Promise<string> {
+    let mediaType = 'image';
+    const lowerFilename = imageFilename.toLowerCase();
+    if (lowerFilename.endsWith('.gif')) {
+      mediaType = 'image/gif';
+    } else if (lowerFilename.endsWith('.jpg' || lowerFilename.endsWith('jpeg'))) {
+      mediaType = 'image/jpeg';
+    } else if (lowerFilename.endsWith('.png')) {
+      mediaType = 'image/png';
+    } else if (lowerFilename.endsWith('webp')) {
+      mediaType = 'image/webp';
+    }
+
     const message = await this.anthropic.messages.create({
       max_tokens: 1024,
-      messages: [{ role: 'user', content: 'Tell me a one-line joke.' }],
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType, data: Buffer.from(imageData).toString('base64') },
+            },
+            {
+              type: 'text',
+              text: 'Provide a description of this image suitable for use as HTML alt-text. Do not use line breaks or square bracket characters in your description.',
+            }
+          ],
+        },
+      ],
       model: this.settings.anthropicModel,
     });
     
@@ -117,13 +143,20 @@ export default class AutoImageAlt extends Plugin {
       id: "generate-missing",
       name: "Generate missing alt-texts",
       editorCallback: async (editor: Editor, view: MarkdownView) => {
-        // const altgen = new AltGen(this.settings);
-        // const result = await altgen.generate();
-        // new Notice(result);
+        const altgen = new AltGen(this.settings);
         const images = locateImages(editor.getValue()).filter(im => im.altEnd == im.altBegin);
         images.reverse();
         for (const image of images) {
-          editor.replaceRange("fancy new alt text", editor.offsetToPos(image.altBegin), editor.offsetToPos(image.altEnd));
+          // TODO this is all super hacky
+          // TODO need to handle paths relative to the open file
+          // TODO need to handle URLs
+          const imagePath = normalizePath(view.file?.parent?.path + '/' + decodeURI(image.target));
+          const imageFile = this.app.vault.getFileByPath(imagePath);
+          if (imageFile) {
+            const imageData = await this.app.vault.readBinary(imageFile);
+            const result = await altgen.generate(imageFile.name, imageData);
+            editor.replaceRange(result, editor.offsetToPos(image.altBegin), editor.offsetToPos(image.altEnd));
+          }
         }
       },
     });
