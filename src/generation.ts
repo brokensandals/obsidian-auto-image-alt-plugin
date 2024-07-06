@@ -62,7 +62,7 @@ export class AltGen {
     const lowerFilename = imageFilename.toLowerCase();
     if (lowerFilename.endsWith('.gif')) {
       mediaType = 'image/gif';
-    } else if (lowerFilename.endsWith('.jpg' || lowerFilename.endsWith('jpeg'))) {
+    } else if (lowerFilename.endsWith('.jpg' || lowerFilename.endsWith('.jpeg'))) {
       mediaType = 'image/jpeg';
     } else if (lowerFilename.endsWith('.png')) {
       mediaType = 'image/png';

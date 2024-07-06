@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { dataFromSettings, settingsFromData, AutoImageAltSettings } from './settings';
 import { AltGen } from './generation';
 import { ImageTag, buildImagePath, locateImages } from './imgtags';
@@ -76,8 +76,16 @@ export class AutoImageAlt extends Plugin {
       const imageFile = this.app.vault.getFileByPath(imagePath);
       if (imageFile) {
         const imageData = await this.app.vault.readBinary(imageFile);
-        const result = await altgen.generate(imageFile.name, imageData, this.settings.prompt);
-        editor.replaceRange(result, editor.offsetToPos(image.altBegin), editor.offsetToPos(image.altEnd));
+        try {
+          const result = await altgen.generate(imageFile.name, imageData, this.settings.prompt);
+          editor.replaceRange(result, editor.offsetToPos(image.altBegin), editor.offsetToPos(image.altEnd));
+          new Notice("Added alt-text for " + imagePath);
+        } catch (err) {
+          console.log(err);
+          new Notice("Failed to generate alt-text for " + imagePath + ": " + err);
+        }
+      } else {
+        new Notice("Could not find image: " + imagePath);
       }
     }
   }

@@ -1,96 +1,43 @@
-# Obsidian Sample Plugin
+# Auto-Image-Alt: Obsidian plugin using generative AI to add alt-text to images
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+If you're writing documents that you plan to publish to the web, it's a good practice to include alt-text for images.
+But writing descriptions that capture all the important details of an image can be tedious.
+AI models can often do a great job!
 
-This project uses Typescript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in Typescript Definition format, which contains TSDoc comments describing what it does.
+This plugin uses [Claude](https://claude.ai) to generate alt-text. Example:
 
-**Note:** The Obsidian API is still in early alpha and is subject to change at any time!
+![](docs/demo-step1.png)
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+![](docs/demo-step2.png)
 
-## First time developing plugins?
+![](docs/demo-step3.png)
 
-Quick starting guide for new plugin devs:
+# Setup
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+1. Install and enable the plugin
+2. Make sure you [have a Claude API key](https://docs.anthropic.com/en/api/getting-started)
+3. Paste your API key into the plugin settings. (*Note*: by default, for security reasons, the key is *not* saved to disk, and you will need re-enter it in settings every time you restart the app or reload the plugin. There's an option to persist it which you can enable if you're confident you understand the risks.)
 
-## Releasing new releases
+Now you should be ready!
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+# Commands
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+- **Generate missing alt-texts**: Finds all the image tags with no alt-text (e.g., tags like `![](foo.png)`, where there's nothing in the brackets) and adds alt-text to all of them.
+- **Generate or regenerate all alt-texts**: Replaces the alt-text of images that already have alt-text, too.
+- **Generate or regenerate alt-texts of images in selection**: Finds the image tag(s) that your cursor is currently inside or that are (at least partially) selected, and replaces their alt-texts.
 
-## Adding your plugin to the community plugin list
+# Customization
 
-- Check https://github.com/obsidianmd/obsidian-releases/blob/master/plugin-review.md
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+On the settings page, you can change which Claude model is used; what prompt is used; and what boilerplate text (if any) is added to the alt-text along with the generated description.
 
-## How to use
+# Known issues and limitations
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
-
-If you have multiple URLs, you can also do:
-
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
-
-## API Documentation
-
-See https://github.com/obsidianmd/obsidian-api
+- Only supports images stored in your vault, not URLs.
+- Assumes references to images are specified using relative paths (e.g., for a file `foo/bar.md` to reference `foo/attachments/image.png`, you must use `![](attachments/image.png)`).
+- Won't correctly handle image tags that contain brackets inside the alt-text.
+- JPEGs don't seem to work and I haven't put much effort into figuring out why (PNGs work).
+- If something goes wrong, the error messages tend to be generic and useless (e.g. "Connection error" when it's really not a connection error).
+- Generating the description is not instantaneous, and if you edit the document in the intervening period between issuing the command and the command completing, the plugin will probably insert the text into the wrong spot.
+- Each image is sent to the AI in isolation, with no context. Perhaps you could get better results by sending part or all of the document too, but I think the results are pretty good as-is.
+- Claude has a max file size; the plugin does not check whether the image fits within this and does not attempt to resize it if it doesn't.
+- Currently only supports Claude.
