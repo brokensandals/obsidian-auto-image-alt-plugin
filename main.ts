@@ -5,21 +5,20 @@ import { TextBlock } from '@anthropic-ai/sdk/resources';
 interface AutoImageAltSettings {
   anthropicApiKey: string;
   anthropicModel: string;
+  syncSensitiveSettings: boolean;
 }
 
 const DEFAULT_SETTINGS: AutoImageAltSettings = {
   anthropicApiKey: '',
   anthropicModel: 'claude-3-5-sonnet-20240620',
+  syncSensitiveSettings: false,
 }
 
-type SensitiveSettings = Pick<AutoImageAltSettings, 'anthropicApiKey'>
-function sensitiveSettings({ anthropicApiKey }: AutoImageAltSettings): SensitiveSettings {
-  return { anthropicApiKey };
-}
-
-type NonsensitiveSettings = Pick<AutoImageAltSettings, 'anthropicModel'>
-function nonsensitiveSettings({ anthropicModel }: AutoImageAltSettings): NonsensitiveSettings {
-  return { anthropicModel };
+function scrubbedSettings(settings: AutoImageAltSettings): AutoImageAltSettings {
+  return {
+    ...DEFAULT_SETTINGS,
+    anthropicModel: settings.anthropicModel,
+  };
 }
 
 class AltGen {
@@ -114,7 +113,8 @@ class AltGen {
     }
     
     async saveSettings() {
-      await this.saveData(nonsensitiveSettings(this.settings));
+      const saveable = this.settings.syncSensitiveSettings ? this.settings : scrubbedSettings(this.settings);
+      await this.saveData(saveable);
     }
   }
   
@@ -137,6 +137,16 @@ class AltGen {
       const {containerEl} = this;
       
       containerEl.empty();
+
+      new Setting(containerEl)
+        .setName('Sync sensitive settings')
+        .setDesc(fragmentForHTML('By default, for security reasons, the API key below will <b>NOT</b> be saved, and you will need to re-enter it upon reloading the plugin or restarting Obsidian. If you\'re <i>sure</i> you want to save it, you can enable this toggle.<br/><b>Danger</b>: enabling this will cause your API key to be stored unencrypted in your data.json file.'))
+        .addToggle(toggle => toggle
+          .setValue(this.plugin.settings.syncSensitiveSettings)
+          .onChange(async (value) => {
+            this.plugin.settings.syncSensitiveSettings = value;
+            await this.plugin.saveSettings();
+          }));
       
       new Setting(containerEl)
         .setName('Anthropic API key')
